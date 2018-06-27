@@ -42,18 +42,19 @@ class User extends Authenticatable
         return $this->belongsToMany(User::class, 'user_follow', 'follow_id', 'user_id')->withTimestamps();
     }
     
+    public function favorites()
+    {
+        return $this->belongsToMany(Micropost::class, 'user_favorite', 'user_id', 'post_id')->withTimestamps();
+    }
+    
    public function follow($userId)
 {
-    // confirm if already following
     $exist = $this->is_following($userId);
-    // confirming that it is not you
     $its_me = $this->id == $userId;
 
     if ($exist || $its_me) {
-        // do nothing if already following
         return false;
     } else {
-        // follow if not following
         $this->followings()->attach($userId);
         return true;
     }
@@ -74,15 +75,48 @@ public function unfollow($userId)
     }
 
 
-    public function is_following($userId) {
-    return $this->followings()->where('follow_id', $userId)->exists();
+    public function favorite($postId)
+    {
+        $exist = $this->is_favorite($postId);
+        
+        if($exist) {
+            return false;
+        } else {
+            $this->favorites()->attach($postId);
+            return true;
+        }
+    }
+    
+    
+    public function unfavorite($postId){
+        $exist=$this->is_favorite($postId);
+        
+        if($exist){
+            $this->favorites()->detach($postId);
+            return true;
+        }else{
+            return false;
+        }
+    }
+    
+    
+    public function is_favorite($postId){
+        return $this->favorites()->where('post_Id', $postId)->exists();
+    }
+
+
+    public function is_following($userId) 
+    {
+    
+        return $this->followings()->where('follow_id', $userId)->exists();
     
     }
+    
 
     public function feed_microposts()
     {
         $follow_user_ids = $this->followings()-> pluck('users.id')->toArray();
         $follow_user_ids[] = $this->id;
         return Micropost::whereIn('user_id', $follow_user_ids);
-    }
+        }
 }
